@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排列五 - 后台管理</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        header { background: linear-gradient(135deg, #1e293b, #334155); padding: 20px; text-align: center; border-bottom: 2px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+        header h1 { font-size: 24px; background: linear-gradient(135deg, #f59e0b, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        .card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+        .card h2 { color: #f59e0b; margin-bottom: 15px; font-size: 18px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 13px; }
+        .form-group input, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #475569; border-radius: 8px; background: #0f172a; color: #cbd5e1; font-size: 14px; }
+        .form-group textarea { resize: vertical; min-height: 120px; font-family: monospace; }
+        .btn { padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all .2s; }
+        .btn-primary { background: #f59e0b; color: #1e293b; }
+        .btn-primary:hover { background: #d97706; }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { background: #334155; color: #cbd5e1; }
+        .flex { display: flex; gap: 10px; align-items: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #334155; font-size: 14px; }
+        th { background: #0f172a; color: #f59e0b; }
+        .msg { padding: 10px; border-radius: 8px; margin-bottom: 15px; }
+        .msg-success { background: #064e3b; color: #6ee7b7; }
+        .msg-error { background: #7f1d1d; color: #fca5a5; }
+        #login-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); display: flex; justify-content: center; align-items: center; z-index: 100; }
+        #login-box { background: #1e293b; border-radius: 12px; padding: 30px; width: 360px; border: 1px solid #334155; }
+        #login-box h2 { color: #f59e0b; text-align: center; margin-bottom: 20px; }
+        .hidden { display: none !important; }
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            #login-box { width: 90%; }
+        }
+    </style>
+</head>
+<body>
+<div id="login-overlay">
+    <div id="login-box">
+        <h2>🔐 管理员登录</h2>
+        <div class="form-group"><label>用户名</label><input id="login-user" type="text" placeholder="admin"></div>
+        <div class="form-group"><label>密码</label><input id="login-pass" type="password" placeholder="admin123"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="doLogin()">登录</button>
+        <p id="login-msg" style="margin-top:10px;text-align:center;color:#fca5a5;"></p>
+    </div>
+</div>
+
+<header class="hidden" id="main-header">
+    <h1>⚙️ 排列五后台管理</h1>
+    <div class="flex">
+        <span id="user-info" style="color:#94a3b8;font-size:13px;"></span>
+        <button class="btn btn-secondary" onclick="logout()">退出</button>
+    </div>
+</header>
+
+<div class="container">
+    <div id="main-content" class="hidden">
+        <div id="msg-area"></div>
+
+        <!-- 添加记录 -->
+        <div class="card">
+            <h2>➕ 添加开奖记录</h2>
+            <div class="flex" style="gap:10px; flex-wrap:wrap;">
+                <div class="form-group" style="flex:1;min-width:120px;"><label>期号</label><input id="add-period" placeholder="2024186"></div>
+                <div class="form-group" style="flex:1;min-width:120px;"><label>日期</label><input id="add-date" placeholder="2024-07-05"></div>
+                <div class="form-group" style="flex:1;min-width:120px;"><label>号码(5位)</label><input id="add-numbers" placeholder="69518" maxlength="5"></div>
+            </div>
+            <button class="btn btn-primary" onclick="addRecord()">添加</button>
+        </div>
+
+        <!-- 批量添加 -->
+        <div class="card">
+            <h2>📦 批量添加（JSON格式）</h2>
+            <div class="form-group">
+                <label>JSON数据（每行一条: {"period":"...","draw_date":"...","numbers":"..."}）</label>
+                <textarea id="batch-data" placeholder='[
+  {"period": "2024186", "draw_date": "2024-07-05", "numbers": "69518"},
+  {"period": "2024187", "draw_date": "2024-07-06", "numbers": "37492"}
+]'></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="batchAdd()">批量导入</button>
+        </div>
+
+        <!-- 记录管理 -->
+        <div class="card">
+            <h2>📋 记录管理</h2>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>期号</th><th>日期</th><th>号码</th><th>操作</th></tr></thead>
+                    <tbody id="manage-body"><tr><td colspan="4">请先登录</td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const API = '/api/admin';
+let token = localStorage.getItem('pl5_token');
+let username = localStorage.getItem('pl5_user');
+
+if (token) {
+    verifyAndShow();
+}
+
+async function doLogin() {
+    const u = document.getElementById('login-user').value || 'admin';
+    const p = document.getElementById('login-pass').value || 'admin123';
+    try {
+        const res = await fetch(`${API}/login`, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({username: u, password: p})
+        });
+        if (!res.ok) {
+            document.getElementById('login-msg').textContent = '用户名或密码错误';
+            return;
+        }
+        const data = await res.json();
+        token = data.token;
+        username = data.username;
+        localStorage.setItem('pl5_token', token);
+        localStorage.setItem('pl5_user', username);
+        showMain();
+    } catch(e) {
+        document.getElementById('login-msg').textContent = '登录失败: ' + e.message;
+    }
+}
+
+async function verifyAndShow() {
+    try {
+        const res = await fetch(`${API}/me`, {headers: {'Authorization': `Bearer ${token}`}});
+        if (res.ok) { showMain(); return; }
+    } catch(e) {}
+    localStorage.removeItem('pl5_token');
+    localStorage.removeItem('pl5_user');
+    token = null;
+}
+
+function showMain() {
+    document.getElementById('login-overlay').classList.add('hidden');
+    document.getElementById('main-header').classList.remove('hidden');
+    document.getElementById('main-content').classList.remove('hidden');
+    document.getElementById('user-info').textContent = `👤 ${username}`;
+    loadManageRecords();
+}
+
+function logout() {
+    localStorage.removeItem('pl5_token');
+    localStorage.removeItem('pl5_user');
+    token = null;
+    location.reload();
+}
+
+async function addRecord() {
+    const period = document.getElementById('add-period').value.trim();
+    const draw_date = document.getElementById('add-date').value.trim();
+    const numbers = document.getElementById('add-numbers').value.trim();
+    if (!period||!draw_date||!numbers) { showMsg('请填写完整信息', 'error'); return; }
+    if (numbers.length!==5||!/^\d+$/.test(numbers)) { showMsg('号码必须是5位数字', 'error'); return; }
+    try {
+        const res = await fetch(`${API}/records`, {
+            method: 'POST', headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+            body: JSON.stringify({period, draw_date, numbers})
+        });
+        const data = await res.json();
+        if (res.ok) { showMsg('添加成功!', 'success'); loadManageRecords(); }
+        else { showMsg('添加失败: ' + (data.detail||'未知错误'), 'error'); }
+    } catch(e) { showMsg('请求失败: '+e.message, 'error'); }
+}
+
+async function batchAdd() {
+    const raw = document.getElementById('batch-data').value.trim();
+    if (!raw) { showMsg('请输入JSON数据', 'error'); return; }
+    try {
+        const records = JSON.parse(raw);
+        if (!Array.isArray(records)) { showMsg('数据格式错误，应为数组', 'error'); return; }
+        const res = await fetch(`${API}/records/batch`, {
+            method: 'POST', headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+            body: JSON.stringify({records})
+        });
+        const data = await res.json();
+        showMsg(`导入完成! 成功: ${data.added}, 跳过: ${data.skipped}`, 'success');
+        loadManageRecords();
+    } catch(e) { showMsg('JSON解析失败: '+e.message, 'error'); }
+}
+
+async function loadManageRecords() {
+    const tbody = document.getElementById('manage-body');
+    try {
+        const res = await fetch(`${API.replace('/admin','')}/records?page=1&page_size=50`);
+        const data = await res.json();
+        if (!data.items||data.items.length===0) { tbody.innerHTML='<tr><td colspan="4">暂无数据</td></tr>'; return; }
+        tbody.innerHTML = data.items.map(r=>`
+            <tr>
+                <td>${r.period}</td><td>${r.draw_date}</td><td><strong style="color:#f59e0b;letter-spacing:4px;">${r.numbers}</strong></td>
+                <td><button class="btn btn-danger" style="padding:4px 12px;font-size:12px;" onclick="deleteRecord(${r.id},'${r.period}')">删除</button></td>
+            </tr>`).join('');
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="4">加载失败</td></tr>'; }
+}
+
+async function deleteRecord(id, period) {
+    if (!confirm(`确定删除期号 ${period} 的记录吗?`)) return;
+    try {
+        const res = await fetch(`${API}/records/${id}`, {
+            method: 'DELETE', headers: {'Authorization':`Bearer ${token}`}
+        });
+        if (res.ok) { showMsg('删除成功', 'success'); loadManageRecords(); }
+        else { showMsg('删除失败', 'error'); }
+    } catch(e) { showMsg('请求失败: '+e.message, 'error'); }
+}
+
+function showMsg(msg, type) {
+    const area = document.getElementById('msg-area');
+    area.innerHTML = `<div class="msg msg-${type}">${msg}</div>`;
+    setTimeout(()=>{area.innerHTML='';},3000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排列五数据分析系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+        header { background: linear-gradient(135deg, #1e293b, #334155); padding: 20px; text-align: center; border-bottom: 2px solid #334155; }
+        header h1 { font-size: 28px; background: linear-gradient(135deg, #f59e0b, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        header p { color: #94a3b8; margin-top: 5px; }
+        nav { display: flex; justify-content: center; gap: 10px; padding: 12px; background: #1e293b; flex-wrap: wrap; }
+        nav button { padding: 8px 20px; border: 1px solid #475569; background: #1e293b; color: #cbd5e1; border-radius: 8px; cursor: pointer; font-size: 14px; transition: all .2s; }
+        nav button:hover, nav button.active { background: #f59e0b; color: #1e293b; border-color: #f59e0b; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .section { display: none; }
+        .section.active { display: block; }
+        .card { background: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 20px; border: 1px solid #334155; }
+        .card h2 { color: #f59e0b; margin-bottom: 15px; font-size: 18px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #334155; font-size: 14px; }
+        th { background: #0f172a; color: #f59e0b; position: sticky; top: 0; }
+        .hot { color: #ef4444; font-weight: bold; }
+        .cold { color: #3b82f6; }
+        .number { font-size: 20px; font-weight: bold; letter-spacing: 8px; color: #f59e0b; }
+        .rec-card { background: #0f172a; border-radius: 10px; padding: 15px; text-align: center; border: 2px solid #f59e0b; }
+        .rec-card .nums { font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #f59e0b; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap: 12px; }
+        .stat-card { background: #0f172a; border-radius: 10px; padding: 15px; text-align: center; }
+        .stat-card .label { font-size: 12px; color: #94a3b8; }
+        .stat-card .value { font-size: 24px; font-weight: bold; color: #f59e0b; }
+        .btn { padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all .2s; }
+        .btn-primary { background: #f59e0b; color: #1e293b; }
+        .btn-primary:hover { background: #d97706; }
+        .btn-secondary { background: #334155; color: #cbd5e1; }
+        .btn-secondary:hover { background: #475569; }
+        .flex { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .pagination { display: flex; justify-content: center; gap: 8px; margin-top: 15px; }
+        .pagination button { padding: 6px 14px; border: 1px solid #475569; background: #1e293b; color: #cbd5e1; border-radius: 6px; cursor: pointer; }
+        .pagination button:hover { background: #f59e0b; color: #1e293b; }
+        .pagination button:disabled { opacity: .5; cursor: default; }
+        select { background: #0f172a; color: #cbd5e1; border: 1px solid #475569; border-radius: 6px; padding: 6px 12px; }
+        .chart-wrap { position: relative; width: 100%; max-height: 300px; }
+        .tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; margin: 2px; }
+        .tag-hot { background: #7f1d1d; color: #fca5a5; }
+        .tag-cold { background: #1e3a5f; color: #93c5fd; }
+        @media (max-width: 768px) {
+            .number { font-size: 16px; letter-spacing: 4px; }
+            .rec-card .nums { font-size: 22px; letter-spacing: 6px; }
+            .grid { grid-template-columns: repeat(3, 1fr); }
+            table { font-size: 12px; }
+            th, td { padding: 6px 4px; }
+        }
+        .loading { text-align: center; padding: 40px; color: #94a3b8; }
+        .loading::after { content: ''; display: inline-block; width: 20px; height: 20px; border: 2px solid #f59e0b; border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; margin-left: 8px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+<header>
+    <h1>🎯 排列五数据分析系统</h1>
+    <p>历史走势 | 数据分析 | 智能推荐</p>
+</header>
+
+<nav>
+    <button class="active" onclick="showSection('records')">📊 历史数据</button>
+    <button onclick="showSection('stats')">📈 数据分析</button>
+    <button onclick="showSection('recommend')">🎯 智能推荐</button>
+    <button onclick="showSection('trend')">📉 走势图</button>
+</nav>
+
+<div class="container">
+    <!-- 历史数据 -->
+    <section id="records" class="section active">
+        <div class="card">
+            <div class="flex" style="justify-content: space-between; margin-bottom: 15px;">
+                <h2 style="margin:0">📊 最新开奖记录</h2>
+                <button class="btn btn-secondary" onclick="loadRecords()">🔄 刷新</button>
+            </div>
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr><th>期号</th><th>日期</th><th>号码</th><th>W1</th><th>W2</th><th>W3</th><th>W4</th><th>W5</th></tr>
+                    </thead>
+                    <tbody id="records-body"><tr><td colspan="8" class="loading">加载中...</td></tr></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="records-pager"></div>
+        </div>
+    </section>
+
+    <!-- 数据分析 -->
+    <section id="stats" class="section">
+        <div id="stats-content"><div class="loading">加载中...</div></div>
+    </section>
+
+    <!-- 智能推荐 -->
+    <section id="recommend" class="section">
+        <div class="card">
+            <h2>🎯 智能号码推荐</h2>
+            <div class="flex" style="margin-bottom: 15px;">
+                <select id="strategy">
+                    <option value="frequency">高频数字</option>
+                    <option value="missing">冷号回补</option>
+                    <option value="balanced">均衡策略</option>
+                    <option value="random">随机</option>
+                </select>
+                <button class="btn btn-primary" onclick="getRecommend()">🎯 立即推荐</button>
+            </div>
+            <p style="color: #94a3b8; font-size: 13px; margin-bottom: 15px;" id="rec-analysis"></p>
+            <div class="grid" id="rec-grid"></div>
+        </div>
+    </section>
+
+    <!-- 走势图 -->
+    <section id="trend" class="section">
+        <div class="card">
+            <h2>📉 号码走势</h2>
+            <div class="flex" style="margin-bottom: 15px;">
+                <select id="trend-pos">
+                    <option value="1">第1位</option>
+                    <option value="2">第2位</option>
+                    <option value="3">第3位</option>
+                    <option value="4">第4位</option>
+                    <option value="5">第5位</option>
+                </select>
+                <button class="btn btn-primary" onclick="loadTrend()">📈 查看走势</button>
+            </div>
+            <div class="chart-wrap"><canvas id="trend-chart"></canvas></div>
+        </div>
+    </section>
+</div>
+
+<script>
+const API = '/api';
+let recordsPage = 1;
+let trendChart = null;
+
+function showSection(name) {
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.getElementById(name).classList.add('active');
+    document.querySelector(`nav button[onclick="showSection('${name}')"]`).classList.add('active');
+    if (name === 'records') loadRecords();
+    else if (name === 'stats') loadStats();
+    else if (name === 'trend') loadTrend();
+}
+
+async function loadRecords(page = 1) {
+    recordsPage = page;
+    const tbody = document.getElementById('records-body');
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">加载中...</td></tr>';
+    try {
+        const res = await fetch(`${API}/records?page=${page}&page_size=50`);
+        const data = await res.json();
+        if (!data.items || data.items.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8">暂无数据</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.items.map(r => `
+            <tr>
+                <td>${r.period}</td>
+                <td>${r.draw_date}</td>
+                <td><span class="number">${r.numbers}</span></td>
+                <td>${r.n1}</td><td>${r.n2}</td><td>${r.n3}</td><td>${r.n4}</td><td>${r.n5}</td>
+            </tr>`).join('');
+        // 分页
+        const totalPages = Math.ceil(data.total / data.page_size);
+        let pager = '';
+        for (let i = 1; i <= Math.min(totalPages, 10); i++) {
+            pager += `<button ${i===page?'disabled':''} onclick="loadRecords(${i})">${i}</button>`;
+        }
+        if (totalPages > 10) pager += '<button disabled>...</button>';
+        document.getElementById('records-pager').innerHTML = pager;
+    } catch(e) {
+        tbody.innerHTML = '<tr><td colspan="8">加载失败: ' + e.message + '</td></tr>';
+    }
+}
+
+async function loadStats() {
+    const el = document.getElementById('stats-content');
+    el.innerHTML = '<div class="loading">分析中...</div>';
+    try {
+        const res = await fetch(`${API}/stats`);
+        const data = await res.json();
+        if (data.total_records === 0) {
+            el.innerHTML = '<div class="card"><p>暂无数据</p></div>';
+            return;
+        }
+        let html = '';
+        // 概览
+        html += `<div class="grid" style="margin-bottom:20px">
+            <div class="stat-card"><div class="label">总期数</div><div class="value">${data.total_records}</div></div>
+            <div class="stat-card"><div class="label">最新期号</div><div class="value">${data.latest_draw?.period||'-'}</div></div>
+            <div class="stat-card"><div class="label">最新号码</div><div class="value">${data.latest_draw?.numbers||'-'}</div></div>
+        </div>`;
+
+        // 冷热号
+        const hc = data.hot_cold;
+        html += '<div class="card"><h2>🔥 冷热号分析</h2>';
+        html += '<div class="flex" style="gap:20px; flex-wrap:wrap;">';
+        html += '<div><strong style="color:#ef4444">热号:</strong> ' + hc.hot.map(d => `<span class="tag tag-hot">${d}</span>`).join('') + '</div>';
+        html += '<div><strong style="color:#93c5fd">冷号:</strong> ' + hc.cold.map(d => `<span class="tag tag-cold">${d}</span>`).join('') + '</div>';
+        html += '</div></div>';
+
+        // 各位频率
+        html += '<div class="card"><h2>📊 各位数字频率统计</h2>';
+        for (let i = 0; i < 5; i++) {
+            html += `<h3 style="color:#cbd5e1; margin:10px 0 5px;">第${i+1}位 (万位→个位)</h3>`;
+            html += '<div style="display:flex; gap:3px; margin-bottom:15px; flex-wrap:wrap;">';
+            data.position_stats[i].forEach(s => {
+                const pct = s.percent;
+                html += `<div style="flex:1; min-width:40px; text-align:center; font-size:12px;">
+                    <div style="background:#f59e0b; height:${pct*3}px; border-radius:3px 3px 0 0; transition:all .3s;"></div>
+                    <div>${s.digit}</div><div style="color:#94a3b8">${pct}%</div>
+                </div>`;
+            });
+            html += '</div>';
+        }
+        html += '</div>';
+
+        // 遗漏统计
+        html += '<div class="card"><h2>⏳ 遗漏统计（未出现期数）</h2>';
+        for (let i = 0; i < 5; i++) {
+            html += `<strong style="margin:10px 0 5px; display:block;">第${i+1}位:</strong> `;
+            html += data.missing_stats[i].missing.map(m =>
+                `<span class="tag ${m.since>10?'tag-hot':'tag-cold'}">${m.digit}:${m.since}期</span>`
+            ).join(' ');
+            html += '<br>';
+        }
+        html += '</div>';
+
+        el.innerHTML = html;
+    } catch(e) {
+        el.innerHTML = '<div class="card"><p>加载失败: ' + e.message + '</p></div>';
+    }
+}
+
+async function getRecommend() {
+    const strategy = document.getElementById('strategy').value;
+    const grid = document.getElementById('rec-grid');
+    grid.innerHTML = '<div class="loading">分析中...</div>';
+    try {
+        const res = await fetch(`${API}/recommend`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({strategy, count: 5})
+        });
+        const data = await res.json();
+        document.getElementById('rec-analysis').textContent = `📊 分析依据: ${data.analysis}`;
+        grid.innerHTML = data.recommendations.map((r, i) => `
+            <div class="rec-card">
+                <div style="color:#94a3b8; font-size:12px; margin-bottom:5px;">推荐 #${i+1}</div>
+                <div class="nums">${r}</div>
+            </div>`).join('');
+    } catch(e) {
+        grid.innerHTML = '<p>获取推荐失败: ' + e.message + '</p>';
+    }
+}
+
+async function loadTrend() {
+    const pos = document.getElementById('trend-pos').value;
+    try {
+        const res = await fetch(`${API}/trend?pos=${pos}&limit=50`);
+        const data = await res.json();
+        const ctx = document.getElementById('trend-chart');
+        if (trendChart) trendChart.destroy();
+        trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.map(d => d.period.slice(-3)),
+                datasets: [{label: `第${pos}位`, data: data.map(d => d.digit), borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.1)', fill: true, tension: 0.3, pointRadius: 3, pointHoverRadius: 6}]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {legend:{labels:{color:'#94a3b8'}}},
+                scales: {
+                    x: {ticks:{color:'#64748b'}, grid:{color:'#1e293b'}},
+                    y: {min:-0.5, max:9.5, ticks:{color:'#64748b', stepSize:1}, grid:{color:'#1e293b'}}
+                }
+            }
+        });
+        ctx.parentElement.style.height = '300px';
+    } catch(e) {
+        console.error(e);
+    }
+}
+
+// 初始加载
+loadRecords();
+</script>
+</body>
+</html>
