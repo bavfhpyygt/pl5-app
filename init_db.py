@@ -26,7 +26,7 @@ def init_database():
     print("✅ 数据库初始化完成！")
 
     # 检查是否有默认管理员账号
-    from sqlalchemy.orm import SessionLocal
+    from database import SessionLocal
     db = SessionLocal()
     try:
         admin = db.query(User).filter(User.username == "admin").first()
