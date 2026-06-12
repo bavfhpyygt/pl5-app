@@ -49,9 +49,9 @@ class StatsResponse(BaseModel):
     """统计响应"""
     total_records: int
     latest_draw: Optional[LotteryOut] = None
-    position_stats: List[dict]
+    position_stats: list  # List[List[dict]]: 每位10个数字的频率
     hot_cold: dict
-    missing_stats: List[dict]
+    missing_stats: list  # List[dict]: 每位遗漏统计
 
 
 class RecommendRequest(BaseModel):

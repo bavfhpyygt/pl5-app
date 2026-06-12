@@ -2,10 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>排列五 - 后台管理</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin:0; padding:0; box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
         header { background: linear-gradient(135deg, #1e293b, #334155); padding: 20px; text-align: center; border-bottom: 2px solid #334155; display: flex; justify-content: space-between; align-items: center; }
         header h1 { font-size: 24px; background: linear-gradient(135deg, #f59e0b, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -14,7 +15,7 @@
         .card h2 { color: #f59e0b; margin-bottom: 15px; font-size: 18px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; color: #94a3b8; font-size: 13px; }
-        .form-group input, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid #475569; border-radius: 8px; background: #0f172a; color: #cbd5e1; font-size: 14px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #475569; border-radius: 8px; background: #0f172a; color: #cbd5e1; font-size: 14px; }
         .form-group textarea { resize: vertical; min-height: 120px; font-family: monospace; }
         .btn { padding: 10px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all .2s; }
         .btn-primary { background: #f59e0b; color: #1e293b; }
@@ -22,7 +23,8 @@
         .btn-danger { background: #ef4444; color: white; }
         .btn-danger:hover { background: #dc2626; }
         .btn-secondary { background: #334155; color: #cbd5e1; }
-        .flex { display: flex; gap: 10px; align-items: center; }
+        .btn-secondary:hover { background: #475569; }
+        .flex { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 10px 12px; text-align: center; border-bottom: 1px solid #334155; font-size: 14px; }
         th { background: #0f172a; color: #f59e0b; }
@@ -33,6 +35,17 @@
         #login-box { background: #1e293b; border-radius: 12px; padding: 30px; width: 360px; border: 1px solid #334155; }
         #login-box h2 { color: #f59e0b; text-align: center; margin-bottom: 20px; }
         .hidden { display: none !important; }
+        .tab-bar { display: flex; gap: 0; margin-bottom: 15px; border-bottom: 2px solid #334155; }
+        .tab-bar button { background: none; border: none; color: #94a3b8; padding: 10px 20px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+        .tab-bar button.active { color: #f59e0b; border-bottom-color: #f59e0b; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .preview-table { max-height: 300px; overflow: auto; margin-top: 10px; }
+        .preview-table table { font-size: 12px; }
+        .preview-table th, .preview-table td { padding: 6px 8px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        .badge-green { background: #064e3b; color: #6ee7b7; }
+        .badge-red { background: #7f1d1d; color: #fca5a5; }
         @media (max-width: 768px) {
             .container { padding: 10px; }
             #login-box { width: 90%; }
@@ -66,24 +79,77 @@
         <div class="card">
             <h2>➕ 添加开奖记录</h2>
             <div class="flex" style="gap:10px; flex-wrap:wrap;">
-                <div class="form-group" style="flex:1;min-width:120px;"><label>期号</label><input id="add-period" placeholder="2024186"></div>
-                <div class="form-group" style="flex:1;min-width:120px;"><label>日期</label><input id="add-date" placeholder="2024-07-05"></div>
-                <div class="form-group" style="flex:1;min-width:120px;"><label>号码(5位)</label><input id="add-numbers" placeholder="69518" maxlength="5"></div>
+                <div class="form-group" style="flex:1;min-width:120px;"><label>期号</label><input id="add-period" placeholder="26153"></div>
+                <div class="form-group" style="flex:1;min-width:120px;"><label>日期</label><input id="add-date" type="date"></div>
+                <div class="form-group" style="flex:1;min-width:120px;"><label>号码(5位)</label><input id="add-numbers" placeholder="15148" maxlength="5"></div>
             </div>
             <button class="btn btn-primary" onclick="addRecord()">添加</button>
         </div>
 
         <!-- 批量添加 -->
         <div class="card">
-            <h2>📦 批量添加（JSON格式）</h2>
-            <div class="form-group">
-                <label>JSON数据（每行一条: {"period":"...","draw_date":"...","numbers":"..."}）</label>
-                <textarea id="batch-data" placeholder='[
-  {"period": "2024186", "draw_date": "2024-07-05", "numbers": "69518"},
-  {"period": "2024187", "draw_date": "2024-07-06", "numbers": "37492"}
-]'></textarea>
+            <h2>📦 批量添加</h2>
+            <div class="tab-bar">
+                <button class="active" onclick="switchTab('json-tab', this)">JSON 格式</button>
+                <button onclick="switchTab('excel-tab', this)">粘贴 Excel 数据</button>
+                <button onclick="switchTab('file-tab', this)">上传 Excel 文件</button>
             </div>
-            <button class="btn btn-primary" onclick="batchAdd()">批量导入</button>
+
+            <!-- JSON 格式 -->
+            <div id="json-tab" class="tab-content active">
+                <div class="form-group">
+                    <label>JSON 数组格式（推荐）</label>
+                    <textarea id="batch-json" placeholder='[
+  {"period": "26153", "draw_date": "2026-06-12", "numbers": "12345"},
+  {"period": "26154", "draw_date": "2026-06-13", "numbers": "67890"}
+]'></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="batchAddJson()">导入 JSON 数据</button>
+            </div>
+
+            <!-- 粘贴 Excel 数据 -->
+            <div id="excel-tab" class="tab-content">
+                <div class="form-group">
+                    <label>从 Excel 复制数据后粘贴到这里（支持制表符/逗号分隔）</label>
+                    <textarea id="batch-excel" placeholder="序号	期号	开奖日期	开奖号码	万位	千位	百位	十位	个位
+26153	2026-06-12	15148	1	5	1	4	8
+26154	2026-06-13	98394	9	8	3	9	4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>数据格式说明</label>
+                    <div style="color:#94a3b8; font-size:12px; line-height:1.8;">
+                        <div>✅ 支持格式1（推荐）：直接粘贴 Excel 整行，自动识别列</div>
+                        <div>✅ 支持格式2：<code>期号,日期,号码</code> 或 <code>期号	日期	号码</code></div>
+                        <div>✅ 支持格式3：只粘贴 <code>开奖号码</code> 列（自动按期号顺序生成）</div>
+                        <div style="color:#f59e0b;">💡 提示：从 Excel 选中数据按 Ctrl+C，然后在这里按 Ctrl+V 即可</div>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="previewExcelData()">预览数据</button>
+                <button class="btn btn-secondary" onclick="batchAddExcel()" style="margin-left:10px;">确认导入</button>
+                <div id="excel-preview" class="preview-table" style="display:none;"></div>
+            </div>
+
+            <!-- 上传 Excel 文件 -->
+            <div id="file-tab" class="tab-content">
+                <div class="form-group">
+                    <label>选择 Excel 文件（.xlsx / .xls）</label>
+                    <input type="file" id="excel-file" accept=".xlsx,.xls" style="padding:8px;">
+                </div>
+                <div class="form-group">
+                    <label>期号列名</label>
+                    <input id="col-period" value="期号" placeholder="期号">
+                </div>
+                <div class="form-group">
+                    <label>日期列名</label>
+                    <input id="col-date" value="开奖日期" placeholder="开奖日期">
+                </div>
+                <div class="form-group">
+                    <label>号码列名（5位数字）</label>
+                    <input id="col-numbers" value="开奖号码" placeholder="开奖号码">
+                </div>
+                <button class="btn btn-primary" onclick="uploadExcel()">上传并导入</button>
+                <div id="file-result" style="margin-top:10px;"></div>
+            </div>
         </div>
 
         <!-- 记录管理 -->
@@ -91,9 +157,14 @@
             <h2>📋 记录管理</h2>
             <div style="overflow-x:auto;">
                 <table>
-                    <thead><tr><th>期号</th><th>日期</th><th>号码</th><th>操作</th></tr></thead>
-                    <tbody id="manage-body"><tr><td colspan="4">请先登录</td></tr></tbody>
+                    <thead><tr><th>ID</th><th>期号</th><th>日期</th><th>号码</th><th>操作</th></tr></thead>
+                    <tbody id="manage-body"><tr><td colspan="5">请先登录</td></tr></tbody>
                 </table>
+            </div>
+            <div style="margin-top:10px; text-align:center;">
+                <button class="btn btn-secondary" onclick="loadManageRecords(page-1)">上一页</button>
+                <span id="page-info" style="margin:0 15px; color:#94a3b8;"></span>
+                <button class="btn btn-secondary" onclick="loadManageRecords(page+1)">下一页</button>
             </div>
         </div>
     </div>
@@ -103,32 +174,27 @@
 const API = '/api/admin';
 let token = localStorage.getItem('pl5_token');
 let username = localStorage.getItem('pl5_user');
+let page = 1;
+let parsedExcelData = null;  // 预览解析的Excel数据
 
-if (token) {
-    verifyAndShow();
-}
+if (token) { verifyAndShow(); }
 
 async function doLogin() {
     const u = document.getElementById('login-user').value || 'admin';
     const p = document.getElementById('login-pass').value || 'admin123';
     try {
         const res = await fetch(`${API}/login`, {
-            method: 'POST', headers: {'Content-Type':'application/json'},
+            method: 'POST', headers: {'Content-Type':'application/json; charset=UTF-8'},
             body: JSON.stringify({username: u, password: p})
         });
-        if (!res.ok) {
-            document.getElementById('login-msg').textContent = '用户名或密码错误';
-            return;
-        }
+        if (!res.ok) { document.getElementById('login-msg').textContent = '用户名或密码错误'; return; }
         const data = await res.json();
         token = data.token;
         username = data.username;
         localStorage.setItem('pl5_token', token);
         localStorage.setItem('pl5_user', username);
         showMain();
-    } catch(e) {
-        document.getElementById('login-msg').textContent = '登录失败: ' + e.message;
-    }
+    } catch(e) { document.getElementById('login-msg').textContent = '登录失败: ' + e.message; }
 }
 
 async function verifyAndShow() {
@@ -146,7 +212,7 @@ function showMain() {
     document.getElementById('main-header').classList.remove('hidden');
     document.getElementById('main-content').classList.remove('hidden');
     document.getElementById('user-info').textContent = `👤 ${username}`;
-    loadManageRecords();
+    loadManageRecords(1);
 }
 
 function logout() {
@@ -154,6 +220,13 @@ function logout() {
     localStorage.removeItem('pl5_user');
     token = null;
     location.reload();
+}
+
+function switchTab(tabId, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-bar button').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    btn.classList.add('active');
 }
 
 async function addRecord() {
@@ -164,43 +237,179 @@ async function addRecord() {
     if (numbers.length!==5||!/^\d+$/.test(numbers)) { showMsg('号码必须是5位数字', 'error'); return; }
     try {
         const res = await fetch(`${API}/records`, {
-            method: 'POST', headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+            method: 'POST',
+            headers: {'Content-Type':'application/json; charset=UTF-8','Authorization':`Bearer ${token}`},
             body: JSON.stringify({period, draw_date, numbers})
         });
         const data = await res.json();
-        if (res.ok) { showMsg('添加成功!', 'success'); loadManageRecords(); }
+        if (res.ok) { showMsg('添加成功!', 'success'); loadManageRecords(page); }
         else { showMsg('添加失败: ' + (data.detail||'未知错误'), 'error'); }
     } catch(e) { showMsg('请求失败: '+e.message, 'error'); }
 }
 
-async function batchAdd() {
-    const raw = document.getElementById('batch-data').value.trim();
+async function batchAddJson() {
+    const raw = document.getElementById('batch-json').value.trim();
     if (!raw) { showMsg('请输入JSON数据', 'error'); return; }
     try {
         const records = JSON.parse(raw);
         if (!Array.isArray(records)) { showMsg('数据格式错误，应为数组', 'error'); return; }
         const res = await fetch(`${API}/records/batch`, {
-            method: 'POST', headers: {'Content-Type':'application/json','Authorization':`Bearer ${token}`},
+            method: 'POST',
+            headers: {'Content-Type':'application/json; charset=UTF-8','Authorization':`Bearer ${token}`},
             body: JSON.stringify({records})
         });
         const data = await res.json();
         showMsg(`导入完成! 成功: ${data.added}, 跳过: ${data.skipped}`, 'success');
-        loadManageRecords();
+        loadManageRecords(page);
     } catch(e) { showMsg('JSON解析失败: '+e.message, 'error'); }
 }
 
-async function loadManageRecords() {
+function previewExcelData() {
+    const raw = document.getElementById('batch-excel').value.trim();
+    if (!raw) { showMsg('请粘贴Excel数据', 'error'); return; }
+    try {
+        const parsed = parseExcelText(raw);
+        if (parsed.length === 0) { showMsg('未能解析出有效数据，请检查格式', 'error'); return; }
+        parsedExcelData = parsed;
+        // 显示预览
+        let html = '<p style="color:#6ee7b7;margin:8px 0;">预览（前10条）: 共解析 ' + parsed.length + ' 条有效数据</p><table><thead><tr><th>期号</th><th>日期</th><th>号码</th></tr></thead><tbody>';
+        parsed.slice(0, 10).forEach(r => {
+            html += `<tr><td>${escHtml(r.period)}</td><td>${escHtml(r.draw_date)}</td><td><strong style="color:#f59e0b;">${escHtml(r.numbers)}</strong></td></tr>`;
+        });
+        html += '</tbody></table>';
+        if (parsed.length > 10) html += '<p style="color:#94a3b8;font-size:12px;">... 还有 ' + (parsed.length-10) + ' 条</p>';
+        document.getElementById('excel-preview').innerHTML = html;
+        document.getElementById('excel-preview').style.display = 'block';
+        showMsg('解析成功! 共 ' + parsed.length + ' 条数据，请点击"确认导入"', 'success');
+    } catch(e) { showMsg('解析失败: ' + e.message, 'error'); }
+}
+
+function batchAddExcel() {
+    if (!parsedExcelData || parsedExcelData.length === 0) {
+        showMsg('请先点击"预览数据"解析数据', 'error');
+        return;
+    }
+    doBatchImport(parsedExcelData);
+}
+
+async function doBatchImport(records) {
+    try {
+        const res = await fetch(`${API}/records/batch`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json; charset=UTF-8','Authorization':`Bearer ${token}`},
+            body: JSON.stringify({records})
+        });
+        const data = await res.json();
+        showMsg(`导入完成! 成功: ${data.added}, 跳过: ${data.skipped}`, 'success');
+        parsedExcelData = null;
+        document.getElementById('excel-preview').style.display = 'none';
+        document.getElementById('batch-excel').value = '';
+        loadManageRecords(page);
+    } catch(e) { showMsg('导入失败: '+e.message, 'error'); }
+}
+
+function parseExcelText(raw) {
+    const lines = raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const records = [];
+    let hasNumbersCol = false;
+
+    for (let line of lines) {
+        // 跳过表头（含中文"期号"、"日期"等关键词的行）
+        if (/期号|开奖日期|开奖号码|序号|万位/.test(line)) continue;
+
+        let period = '', draw_date = '', numbers = '';
+
+        // 尝试按制表符分割（Excel复制的标准格式）
+        let parts = line.split('\t').map(p => p.trim()).filter(p => p.length > 0);
+
+        if (parts.length >= 3) {
+            // 格式: 序号 期号 日期 号码 万 千 百 十 个
+            // 或: 期号 日期 号码
+            if (parts.length >= 9) {
+                // 完整9列格式
+                period = parts[1];
+                draw_date = parts[2];
+                numbers = parts[3];
+            } else if (parts.length >= 4 && /^\d{5}$/.test(parts[parts.length-1])) {
+                // 最后一列是5位号码
+                numbers = parts[parts.length-1];
+                period = parts[parts.length-4] || '';
+                draw_date = parts[parts.length-3] || '';
+            } else if (parts.length >= 3) {
+                // 简单3列: 期号 日期 号码
+                period = parts[0];
+                draw_date = parts[1];
+                numbers = parts[2];
+            }
+        } else {
+            // 尝试按逗号或空格分割
+            parts = line.split(/[,\s]+/).map(p => p.trim()).filter(p => p.length > 0);
+            if (parts.length >= 3) {
+                period = parts[0];
+                draw_date = parts[1];
+                numbers = parts[2];
+            }
+        }
+
+        // 验证数据
+        if (!period || !draw_date || !numbers) continue;
+        numbers = numbers.replace(/\s/g, '');
+        if (numbers.length !== 5 || !/^\d{5}$/.test(numbers)) continue;
+        if (!/^\d{5,}$/.test(period)) continue;
+
+        records.push({period, draw_date, numbers});
+    }
+    return records;
+}
+
+async function uploadExcel() {
+    const fileInput = document.getElementById('excel-file');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        showMsg('请选择Excel文件', 'error'); return;
+    }
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('col_period', document.getElementById('col-period').value.trim());
+    formData.append('col_date', document.getElementById('col-date').value.trim());
+    formData.append('col_numbers', document.getElementById('col-numbers').value.trim());
+
+    try {
+        showMsg('正在上传并解析文件...', 'success');
+        const res = await fetch(`${API}/records/upload`, {
+            method: 'POST',
+            headers: {'Authorization': `Bearer ${token}`},
+            body: formData
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showMsg(`文件导入完成! 成功: ${data.added}, 跳过: ${data.skipped}`, 'success');
+            loadManageRecords(page);
+        } else {
+            showMsg('导入失败: ' + (data.detail || '未知错误'), 'error');
+        }
+    } catch(e) { showMsg('上传失败: '+e.message, 'error'); }
+}
+
+async function loadManageRecords(p) {
+    if (p < 1) return;
+    page = p;
     const tbody = document.getElementById('manage-body');
     try {
-        const res = await fetch(`${API.replace('/admin','')}/records?page=1&page_size=50`);
+        const res = await fetch(`${API.replace('/admin','')}/records?page=${page}&page_size=20`);
         const data = await res.json();
-        if (!data.items||data.items.length===0) { tbody.innerHTML='<tr><td colspan="4">暂无数据</td></tr>'; return; }
+        document.getElementById('page-info').textContent = `第 ${data.page} 页 / 共 ${Math.ceil(data.total/data.page_size)} 页（共 ${data.total} 条）`;
+        if (!data.items||data.items.length===0) {
+            tbody.innerHTML='<tr><td colspan="5">暂无数据</td></tr>'; return;
+        }
         tbody.innerHTML = data.items.map(r=>`
             <tr>
-                <td>${r.period}</td><td>${r.draw_date}</td><td><strong style="color:#f59e0b;letter-spacing:4px;">${r.numbers}</strong></td>
-                <td><button class="btn btn-danger" style="padding:4px 12px;font-size:12px;" onclick="deleteRecord(${r.id},'${r.period}')">删除</button></td>
+                <td>${r.id}</td>
+                <td>${escHtml(r.period)}</td>
+                <td>${escHtml(r.draw_date)}</td>
+                <td><strong style="color:#f59e0b;letter-spacing:4px;">${escHtml(r.numbers)}</strong></td>
+                <td><button class="btn btn-danger" style="padding:4px 12px;font-size:12px;" onclick="deleteRecord(${r.id},'${escHtml(r.period)}')">删除</button></td>
             </tr>`).join('');
-    } catch(e) { tbody.innerHTML = '<tr><td colspan="4">加载失败</td></tr>'; }
+    } catch(e) { tbody.innerHTML = '<tr><td colspan="5">加载失败</td></tr>'; }
 }
 
 async function deleteRecord(id, period) {
@@ -209,15 +418,21 @@ async function deleteRecord(id, period) {
         const res = await fetch(`${API}/records/${id}`, {
             method: 'DELETE', headers: {'Authorization':`Bearer ${token}`}
         });
-        if (res.ok) { showMsg('删除成功', 'success'); loadManageRecords(); }
+        if (res.ok) { showMsg('删除成功', 'success'); loadManageRecords(page); }
         else { showMsg('删除失败', 'error'); }
     } catch(e) { showMsg('请求失败: '+e.message, 'error'); }
 }
 
+function escHtml(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+
 function showMsg(msg, type) {
     const area = document.getElementById('msg-area');
-    area.innerHTML = `<div class="msg msg-${type}">${msg}</div>`;
-    setTimeout(()=>{area.innerHTML='';},3000);
+    area.innerHTML = `<div class="msg msg-${type}">${escHtml(msg)}</div>`;
+    setTimeout(()=>{area.innerHTML='';}, 4000);
 }
 </script>
 </body>
